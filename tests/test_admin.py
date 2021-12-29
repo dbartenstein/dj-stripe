@@ -5,7 +5,8 @@ from typing import Sequence
 
 import pytest
 from django.apps import apps
-from django.contrib.admin import site
+from django.contrib import messages
+from django.contrib.admin import helpers, site
 from django.contrib.auth import get_user_model
 from django.core.exceptions import FieldError
 from django.test import TestCase
@@ -53,6 +54,35 @@ def test_get_forward_relation_fields_for_model(output, input):
     assert output == djstripe_admin.get_forward_relation_fields_for_model(input)
 
 
+class TestAdminCustomActions:
+    @pytest.mark.parametrize("fake_selected_pks", [None, [1, 2]])
+    def test__resync_all_usage_record_summaries(self, admin_client, fake_selected_pks):
+
+        model = models.UsageRecordSummary
+
+        # get the standard changelist_view url
+        change_url = reverse(
+            f"admin:{model._meta.app_label}_{model.__name__.lower()}_changelist"
+        )
+
+        data = {"action": "_resync_all_usage_record_summaries"}
+
+        if fake_selected_pks is not None:
+            data[helpers.ACTION_CHECKBOX_NAME] = fake_selected_pks
+
+        response = admin_client.post(change_url, data, follow=True)
+        assert response.status_code == 200
+
+        # assert correct Success messages are emmitted
+        messages_sent_dictionary = {
+            m.message: m.level_tag for m in messages.get_messages(response.wsgi_request)
+        }
+
+        # assert correct success message was emmitted
+        assert (
+            messages_sent_dictionary.get("Successfully Synced ALL Instances")
+            == "success"
+        )
 class TestAdminRegisteredModels(TestCase):
     def setUp(self):
         self.admin = get_user_model().objects.create_superuser(
@@ -495,3 +525,36 @@ class TestAdminSite(TestCase):
                     ),
                     display_value,
                 )
+
+
+class TestUsageRecordSummaryAdmin:
+    @pytest.mark.parametrize("fake_selected_pks", [None, [1, 2]])
+    def test_changelist_view(self, admin_client, admin_user, fake_selected_pks):
+
+        model = models.UsageRecordSummary
+
+        # get the standard changelist_view url
+        change_url = reverse(
+            f"admin:{model._meta.app_label}_{model.__name__.lower()}_changelist"
+        )
+
+        data = {"action": "_resync_all_usage_record_summaries"}
+
+        if fake_selected_pks is not None:
+            # add key helpers.ACTION_CHECKBOX_NAME when it is not None
+            data[helpers.ACTION_CHECKBOX_NAME] = fake_selected_pks
+
+        # get the response. This will invoke the changelist_view
+        response = admin_client.post(change_url, data=data, follow=True)
+
+        assert response.status_code == 200
+
+        # assert correct Success messages are emmitted
+        messages_sent_dictionary = {
+            m.message: m.level_tag for m in messages.get_messages(response.wsgi_request)
+        }
+        # assert correct success message was emmitted
+        assert (
+            messages_sent_dictionary.get("Successfully Synced ALL Instances")
+            == "success"
+        )
