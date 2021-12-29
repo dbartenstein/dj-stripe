@@ -570,7 +570,7 @@ class SubscriptionAdmin(StripeModelAdmin):
 
     _cancel.short_description = "Cancel selected subscriptions"  # type: ignore # noqa
 
-    actions = (_cancel,)
+    actions = (_cancel, _resync_instances)
 
 
 @admin.register(models.TaxRate)
