@@ -315,6 +315,12 @@ class APIKeyAdmin(StripeModelAdmin):
             fields.remove("livemode")
         return fields
 
+    def get_actions(self, request):
+        actions = super().get_actions(request)
+        if "_resync_instances" in actions:
+            del actions["_resync_instances"]
+        return actions
+
 
 @admin.register(models.BalanceTransaction)
 class BalanceTransactionAdmin(ReadOnlyMixin, StripeModelAdmin):
